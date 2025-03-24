@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <sys/sendfile.h>
 #include <dirent.h>
+#include <cstdlib>
 
 int initListsenFD(unsigned short port)
 {
@@ -235,14 +236,26 @@ const char* getFileType(const char *name) {
     return "text/plain; charset=utf-8";
 }
 
-
-/// @brief 
-/// @param dirName 
-/// @param cfd 
-/// @return 
 int sendDir(const char *dirName, int cfd)
 {  struct dirent**namelist;
     int dirNum=scandir(dirName,&namelist,nullptr,alphasort);
+    for(size_t i=0;i<dirNum;++i){
+        //取出文件名
+        char *name=namelist[i]->d_name;
+        //判断子项目还是不是目录
+        struct stat st;
+        char subPath[1024]={0};
+        sprintf(subPath,"%s/%s",dirName,name);
+        stat(subPath,&st);
+        if(S_ISDIR(st.st_mode)){
+
+        }
+        else{
+
+        }
+        free(namelist[i]);
+    }
+    free(namelist);
     return 0;
 }
 
