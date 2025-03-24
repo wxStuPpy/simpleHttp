@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <assert.h>
 #include <sys/sendfile.h>
+#include <dirent.h>
 
 int initListsenFD(unsigned short port)
 {
@@ -183,7 +184,7 @@ int parseRequstLine(const char *line, int cfd)
     if (ret == -1)
     {
         // 文件不存在 回复404
-        sendHeadMsg(cfd,404,"Not Found",getFileType(".html"),-1);//让浏览器自己去读长度
+        sendHeadMsg(cfd,404,"Not Found",getFileType(".html"),-1);//-1让浏览器自己去读长度
         sendFile("404.html",cfd);
         return 0;
     }
@@ -201,7 +202,6 @@ int parseRequstLine(const char *line, int cfd)
 
     return 0;
 }
-
 
 const char* getFileType(const char *name) {
     // 自右向左找'.' 不存在则返回默认类型
@@ -233,6 +233,17 @@ const char* getFileType(const char *name) {
     }
 
     return "text/plain; charset=utf-8";
+}
+
+
+/// @brief 
+/// @param dirName 
+/// @param cfd 
+/// @return 
+int sendDir(const char *dirName, int cfd)
+{  struct dirent**namelist;
+    int dirNum=scandir(dirName,&namelist,nullptr,alphasort);
+    return 0;
 }
 
 int sendFile(const char *fileName, int cfd)
