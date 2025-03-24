@@ -78,7 +78,7 @@ int epollRun(int lfd)
     while (1)
     {
         int num = epoll_wait(epfd, evs, sizeof(evs) / sizeof(evs[0]), -1); //-1代表阻塞
-        for (size_t i = 0; i < num; ++i)
+        for (int i = 0; i < num; ++i)
         {
             int fd = evs[i].data.fd;
             // 监听描述符
@@ -129,7 +129,7 @@ int acceptClient(int lfd, int epfd)
 int recvHttpRequest(int cfd, int epfd)
 {
     int len = 0;
-    int total = 0;
+    size_t total = 0;
     char tmp[1024] = {0};
     char buf[4096] = {0};
     while ((len = recv(cfd, tmp, sizeof(tmp), 0) > 0))
@@ -145,6 +145,10 @@ int recvHttpRequest(int cfd, int epfd)
     if (len == -1 && errno == EAGAIN)
     {
         // 解析请求行
+        char *pt=strstr(buf,"\r\n");
+        int reqLen=pt-buf;
+        buf[reqLen]='\0';
+        parseRequstLine(buf,cfd);
     }
     else if (len == 0)
     {
@@ -185,51 +189,74 @@ int parseRequstLine(const char *line, int cfd)
     if (ret == -1)
     {
         // 文件不存在 回复404
-        sendHeadMsg(cfd,404,"Not Found",getFileType(".html"),-1);//-1让浏览器自己去读长度
-        sendFile("404.html",cfd);
+        sendHeadMsg(cfd, 404, "Not Found", getFileType(".html"), -1); //-1让浏览器自己去读长度
+        sendFile("404.html", cfd);
         return 0;
     }
     // 判断请求的资源是目录还是文件
     if (S_ISDIR(st.st_mode))
     {
         // 把这个目录中的内容发给客户端
+        sendHeadMsg(cfd, 200, "OK", getFileType(".html"), -1);
+        sendDir(file,cfd);
     }
     else
     {
         // 把这个文件中的内容发给客户端
-        sendHeadMsg(cfd,200,"OK",getFileType(file),st.st_size);
-        sendFile(file,cfd);
+        sendHeadMsg(cfd, 200, "OK", getFileType(file), st.st_size);
+        sendFile(file, cfd);
     }
 
     return 0;
 }
 
-const char* getFileType(const char *name) {
+const char *getFileType(const char *name)
+{
     // 自右向左找'.' 不存在则返回默认类型
-    const char* dot = strrchr(name, '.');
-    if (dot == nullptr) {
+    const char *dot = strrchr(name, '.');
+    if (dot == nullptr)
+    {
         return "text/plain; charset=utf-8";
     }
 
-    if (strcmp(dot, ".html") == 0 || strcmp(dot, ".htm") == 0) {
+    if (strcmp(dot, ".html") == 0 || strcmp(dot, ".htm") == 0)
+    {
         return "text/html; charset=utf-8";
-    } else if (strcmp(dot, ".css") == 0) {
+    }
+    else if (strcmp(dot, ".css") == 0)
+    {
         return "text/css; charset=utf-8";
-    } else if (strcmp(dot, ".js") == 0) {
+    }
+    else if (strcmp(dot, ".js") == 0)
+    {
         return "application/javascript; charset=utf-8";
-    } else if (strcmp(dot, ".jpg") == 0 || strcmp(dot, ".jpeg") == 0) {
+    }
+    else if (strcmp(dot, ".jpg") == 0 || strcmp(dot, ".jpeg") == 0)
+    {
         return "image/jpeg";
-    } else if (strcmp(dot, ".png") == 0) {
+    }
+    else if (strcmp(dot, ".png") == 0)
+    {
         return "image/png";
-    } else if (strcmp(dot, ".gif") == 0) {
+    }
+    else if (strcmp(dot, ".gif") == 0)
+    {
         return "image/gif";
-    } else if (strcmp(dot, ".svg") == 0) {
+    }
+    else if (strcmp(dot, ".svg") == 0)
+    {
         return "image/svg+xml";
-    } else if (strcmp(dot, ".mp4") == 0) {
+    }
+    else if (strcmp(dot, ".mp4") == 0)
+    {
         return "video/mp4";
-    } else if (strcmp(dot, ".pdf") == 0) {
+    }
+    else if (strcmp(dot, ".pdf") == 0)
+    {
         return "application/pdf";
-    } else if (strcmp(dot, ".json") == 0) {
+    }
+    else if (strcmp(dot, ".json") == 0)
+    {
         return "application/json; charset=utf-8";
     }
 
@@ -237,26 +264,35 @@ const char* getFileType(const char *name) {
 }
 
 int sendDir(const char *dirName, int cfd)
-{   char buf[4096]={0};
-sprintf(buf,"<html><head><title>%s<title><head><body><table>",dirName);
-    struct dirent**namelist;
-    int dirNum=scandir(dirName,&namelist,nullptr,alphasort);
-    for(size_t i=0;i<dirNum;++i){
-        //取出文件名
-        char *name=namelist[i]->d_name;
-        //判断子项目还是不是目录
+{
+    char buf[4096] = {0};
+    sprintf(buf, "<html><head><title>%s<title><head><body><table>", dirName);
+    struct dirent **namelist;
+    int dirNum = scandir(dirName, &namelist, nullptr, alphasort);
+    for (int i = 0; i < dirNum; ++i)
+    {
+        // 取出文件名
+        char *name = namelist[i]->d_name;
         struct stat st;
-        char subPath[1024]={0};
-        sprintf(subPath,"%s/%s",dirName,name);
-        stat(subPath,&st);
-        if(S_ISDIR(st.st_mode)){
-sprintf(buf+strlen(buf),"<tr><td>%s</td><td>%ld</td><tr>",name,st.st_size);
+        char subPath[1024] = {0};
+        sprintf(subPath, "%s/%s", dirName, name);
+        stat(subPath, &st);
+            // 判断子项目还是不是目录
+        if (S_ISDIR(st.st_mode))
+        {   //a标签 <a href="">name</a>
+            sprintf(buf + strlen(buf), "<tr><td><a href=\"%s/\">%s</a></td><td>%ld</td><tr>",
+            name,name, st.st_size);
         }
-        else{
-
+        else
+        { sprintf(buf + strlen(buf), "<tr><td><a href=\"%s\">%s</a></td><td>%ld</td><tr>",//第一个%s不需要"/"
+            name,name, st.st_size);
         }
+        send(cfd,buf,strlen(buf),0);
+        memset(buf,0,sizeof(buf));
         free(namelist[i]);
     }
+    sprintf(buf,"</table></body></html>");
+    send(cfd,buf,strlen(buf),0);
     free(namelist);
     return 0;
 }
@@ -265,7 +301,7 @@ int sendFile(const char *fileName, int cfd)
 { // 1.打开文件
     int fd = open(fileName, O_RDONLY);
     assert(fd > 0);
-#if 0 该方法比较麻烦
+#if 0 //该方法比较麻烦
     while(1){
         char buf[1024];
         int len=read(fd,buf,sizeof(buf));
@@ -292,13 +328,13 @@ int sendFile(const char *fileName, int cfd)
 }
 
 int sendHeadMsg(int cfd, int status, const char *descr, const char *type, int len)
-{   //状态行
-    char buf[4096]={0};
-    sprintf(buf,"http/1.1 %d %s\r\n",status,descr);
-    //响应头
-    sprintf(buf+strlen(buf),"content-type:%s\r\n",type);
-    sprintf(buf+strlen(buf),"content-length:%d\r\n\r\n",len);//包括空行
+{ // 状态行
+    char buf[4096] = {0};
+    sprintf(buf, "http/1.1 %d %s\r\n", status, descr);
+    // 响应头
+    sprintf(buf + strlen(buf), "content-type:%s\r\n", type);
+    sprintf(buf + strlen(buf), "content-length:%d\r\n\r\n", len); // 包括空行
 
-    send(cfd,buf,strlen(buf),0);
+    send(cfd, buf, strlen(buf), 0);
     return 0;
 }

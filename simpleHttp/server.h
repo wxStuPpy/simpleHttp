@@ -24,3 +24,4 @@ const char*getFileType(const char*name);
 
 //发送目录
 int sendDir(const char*dirName,int cfd);
+
