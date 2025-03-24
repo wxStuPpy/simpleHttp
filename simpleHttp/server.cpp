@@ -12,7 +12,7 @@
 #include <dirent.h>
 #include <cstdlib>
 
-int initListsenFD(unsigned short port)
+int initListenFD(unsigned short port)
 {
     // 1.创建监听fd
     int lfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -128,7 +128,7 @@ int acceptClient(int lfd, int epfd)
 }
 
 int recvHttpRequest(int cfd, int epfd)
-{   printf("111");
+{  
     int len = 0;
     size_t total = 0;
     char tmp[1024] = {0};
@@ -267,7 +267,7 @@ const char *getFileType(const char *name)
 int sendDir(const char *dirName, int cfd)
 {
     char buf[4096] = {0};
-    sprintf(buf, "<html><head><title>%s<title><head><body><table>", dirName);
+    sprintf(buf, "<html><head><title>%s</title><head><body><table>", dirName);
     struct dirent **namelist;
     int dirNum = scandir(dirName, &namelist, nullptr, alphasort);
     for (int i = 0; i < dirNum; ++i)

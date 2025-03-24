@@ -15,11 +15,11 @@ CFLAGS = -Wall -std=c++11
 
 # 生成可执行文件的目标
 $(TARGET): $(SRC) $(HEADERS)
-	$(CC) $(CFLAGS) $^ -o $@
+	-$(CC) $(CFLAGS) $^ -o $@
 
 # 运行可执行文件的目标
 run: $(TARGET)
-	./$(TARGET) 10000 /home/ywx/tool
+	-./$(TARGET) 10000 /home/ywx/tool
 
 # 清理生成的可执行文件的目标
 clean:

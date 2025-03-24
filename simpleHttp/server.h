@@ -1,7 +1,7 @@
 #pragma once
 
 //初始化监听套接字
-int initListsenFD(unsigned short port);
+int initListenFD(unsigned short port);
 
 //启动epoll
 int epollRun(int lfd);
