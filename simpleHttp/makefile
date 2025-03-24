@@ -13,11 +13,14 @@ CC = g++
 # 定义编译选项
 CFLAGS = -Wall -std=c++11
 
-# 目标: 依赖
-# 规则
+# 生成可执行文件的目标
 $(TARGET): $(SRC) $(HEADERS)
 	$(CC) $(CFLAGS) $^ -o $@
 
-# 清理目标，删除生成的可执行文件
+# 运行可执行文件的目标
+run: $(TARGET)
+	./$(TARGET) 10000 /home/ywx/tool
+
+# 清理生成的可执行文件的目标
 clean:
 	-rm -f $(TARGET)

@@ -101,6 +101,7 @@ int epollRun(int lfd)
 
 int acceptClient(int lfd, int epfd)
 { // 1.建立连接
+    printf("222");
     int cfd = accept(lfd, nullptr, nullptr);
     if (cfd == -1)
     {
@@ -127,12 +128,12 @@ int acceptClient(int lfd, int epfd)
 }
 
 int recvHttpRequest(int cfd, int epfd)
-{
+{   printf("111");
     int len = 0;
     size_t total = 0;
     char tmp[1024] = {0};
     char buf[4096] = {0};
-    while ((len = recv(cfd, tmp, sizeof(tmp), 0) > 0))
+    while ((len = recv(cfd, tmp, sizeof(tmp), 0)) > 0)
     {
         if (total + len < sizeof(buf))
         {
@@ -145,10 +146,10 @@ int recvHttpRequest(int cfd, int epfd)
     if (len == -1 && errno == EAGAIN)
     {
         // 解析请求行
-        char *pt=strstr(buf,"\r\n");
-        int reqLen=pt-buf;
-        buf[reqLen]='\0';
-        parseRequstLine(buf,cfd);
+        char *pt = strstr(buf, "\r\n");
+        int reqLen = pt - buf;
+        buf[reqLen] = '\0';
+        parseRequstLine(buf, cfd);
     }
     else if (len == 0)
     {
@@ -198,7 +199,7 @@ int parseRequstLine(const char *line, int cfd)
     {
         // 把这个目录中的内容发给客户端
         sendHeadMsg(cfd, 200, "OK", getFileType(".html"), -1);
-        sendDir(file,cfd);
+        sendDir(file, cfd);
     }
     else
     {
@@ -277,22 +278,23 @@ int sendDir(const char *dirName, int cfd)
         char subPath[1024] = {0};
         sprintf(subPath, "%s/%s", dirName, name);
         stat(subPath, &st);
-            // 判断子项目还是不是目录
+        // 判断子项目还是不是目录
         if (S_ISDIR(st.st_mode))
-        {   //a标签 <a href="">name</a>
+        { // a标签 <a href="">name</a>
             sprintf(buf + strlen(buf), "<tr><td><a href=\"%s/\">%s</a></td><td>%ld</td><tr>",
-            name,name, st.st_size);
+                    name, name, st.st_size);
         }
         else
-        { sprintf(buf + strlen(buf), "<tr><td><a href=\"%s\">%s</a></td><td>%ld</td><tr>",//第一个%s不需要"/"
-            name,name, st.st_size);
+        {
+            sprintf(buf + strlen(buf), "<tr><td><a href=\"%s\">%s</a></td><td>%ld</td><tr>", // 第一个%s不需要"/"
+                    name, name, st.st_size);
         }
-        send(cfd,buf,strlen(buf),0);
-        memset(buf,0,sizeof(buf));
+        send(cfd, buf, strlen(buf), 0);
+        memset(buf, 0, sizeof(buf));
         free(namelist[i]);
     }
-    sprintf(buf,"</table></body></html>");
-    send(cfd,buf,strlen(buf),0);
+    sprintf(buf, "</table></body></html>");
+    send(cfd, buf, strlen(buf), 0);
     free(namelist);
     return 0;
 }
@@ -301,7 +303,7 @@ int sendFile(const char *fileName, int cfd)
 { // 1.打开文件
     int fd = open(fileName, O_RDONLY);
     assert(fd > 0);
-#if 0 //该方法比较麻烦
+#if 0 // 该方法比较麻烦
     while(1){
         char buf[1024];
         int len=read(fd,buf,sizeof(buf));
