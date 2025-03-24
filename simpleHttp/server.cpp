@@ -237,7 +237,9 @@ const char* getFileType(const char *name) {
 }
 
 int sendDir(const char *dirName, int cfd)
-{  struct dirent**namelist;
+{   char buf[4096]={0};
+sprintf(buf,"<html><head><title>%s<title><head><body><table>",dirName);
+    struct dirent**namelist;
     int dirNum=scandir(dirName,&namelist,nullptr,alphasort);
     for(size_t i=0;i<dirNum;++i){
         //取出文件名
@@ -248,7 +250,7 @@ int sendDir(const char *dirName, int cfd)
         sprintf(subPath,"%s/%s",dirName,name);
         stat(subPath,&st);
         if(S_ISDIR(st.st_mode)){
-
+sprintf(buf+strlen(buf),"<tr><td>%s</td><td>%ld</td><tr>",name,st.st_size);
         }
         else{
 
