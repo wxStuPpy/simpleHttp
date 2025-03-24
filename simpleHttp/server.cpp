@@ -128,7 +128,7 @@ int acceptClient(int lfd, int epfd)
 }
 
 int recvHttpRequest(int cfd, int epfd)
-{  
+{
     int len = 0;
     size_t total = 0;
     char tmp[1024] = {0};
@@ -319,12 +319,20 @@ int sendFile(const char *fileName, int cfd)
             perror("read");
         }
         }
+        close(fd);
 #else
     // 求文件的大小 或者使用stat
     int size = lseek(fd, 0, SEEK_END);
-    sendfile(cfd, fd, nullptr, size);
-    return 0;
+    lseek(fd, 0, SEEK_SET);
 
+    off_t offset = 0;
+
+    while (offset < size)
+    {
+        sendfile(cfd, fd, &offset, size-offset);
+    }
+
+    close(fd);
 #endif
     return 0;
 }
@@ -338,5 +346,17 @@ int sendHeadMsg(int cfd, int status, const char *descr, const char *type, int le
     sprintf(buf + strlen(buf), "content-length:%d\r\n\r\n", len); // 包括空行
 
     send(cfd, buf, strlen(buf), 0);
+    return 0;
+}
+
+// 将字符转化为整数
+int hexToDec(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
     return 0;
 }
