@@ -26,5 +26,5 @@ const char*getFileType(const char*name);
 int sendDir(const char*dirName,int cfd);
 
 //将字符转化为整数
-int hexToDec(char c)
+int hexToDec(char c);
 
