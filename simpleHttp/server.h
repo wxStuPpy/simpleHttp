@@ -7,10 +7,10 @@ int initListenFD(unsigned short port);
 int epollRun(int lfd);
 
 //与客户端建立连接
-int acceptClient(int lfd,int epfd);
+void* acceptClient(void*arg);
 
 //接收http请求
-int recvHttpRequest(int cfd,int epfd);
+void* recvHttpRequest(void*arg);
 
 //解析请求行
 int parseRequstLine(const char*line,int cfd);
@@ -25,6 +25,9 @@ const char*getFileType(const char*name);
 //发送目录
 int sendDir(const char*dirName,int cfd);
 
-//将字符转化为整数
+// 将十六进制转化为十进制
 int hexToDec(char c);
+
+//解码
+void decodeMsg(char*to,char*from);
 

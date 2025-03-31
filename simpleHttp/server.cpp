@@ -11,6 +11,14 @@
 #include <sys/sendfile.h>
 #include <dirent.h>
 #include <cstdlib>
+#include <ctype.h>
+#include <pthread.h>
+
+struct FDInfo{
+    int fd;
+    int epfd;
+    pthread_t tid;
+};
 
 int initListenFD(unsigned short port)
 {
@@ -79,19 +87,24 @@ int epollRun(int lfd)
     {
         int num = epoll_wait(epfd, evs, sizeof(evs) / sizeof(evs[0]), -1); //-1代表阻塞
         for (int i = 0; i < num; ++i)
-        {
+        {   struct FDInfo*info=new FDInfo;
             int fd = evs[i].data.fd;
+            info->fd=fd;
+            info->epfd=epfd;
             // 监听描述符
             if (fd == lfd)
             {
                 // 建立新链接
-                acceptClient(lfd, epfd);
+                //acceptClient(lfd, epfd);
+                pthread_create(&info->tid,nullptr,acceptClient,info);
+                
             }
             // 通信描述符
             else
             {
                 // 主要是接受对端的数据 (http协议)
-                recvHttpRequest(fd, epfd);
+                //recvHttpRequest(fd, epfd);
+                pthread_create(&info->tid,nullptr,recvHttpRequest,info);
             }
         }
     }
@@ -99,14 +112,17 @@ int epollRun(int lfd)
     return 0;
 }
 
-int acceptClient(int lfd, int epfd)
+void* acceptClient(void*arg)
 { // 1.建立连接
+    FDInfo *info=(FDInfo*)arg;
+    int lfd=info->fd;
+    int epfd=info->epfd;
     printf("222");
     int cfd = accept(lfd, nullptr, nullptr);
     if (cfd == -1)
     {
         perror("accept");
-        return -1;
+        return nullptr;
     }
     // 2.设置非阻塞 NNN
     int flag = fcntl(cfd, F_GETFL);
@@ -122,13 +138,16 @@ int acceptClient(int lfd, int epfd)
     if (ret == -1)
     {
         perror("epoll_ctl");
-        return -1;
+        return nullptr;
     }
-    return 0;
+    delete info;
+    return nullptr;
 }
 
-int recvHttpRequest(int cfd, int epfd)
-{
+void* recvHttpRequest(void*arg)
+{   FDInfo *info=(FDInfo*)arg;
+    int cfd=info->fd;
+    int epfd=info->epfd;
     int len = 0;
     size_t total = 0;
     char tmp[1024] = {0};
@@ -161,19 +180,22 @@ int recvHttpRequest(int cfd, int epfd)
     {
         perror("recv");
     }
-    return 0;
+    delete info;
+    return nullptr;
 }
 
 int parseRequstLine(const char *line, int cfd)
 { // 解析请求行  GET /index.html HTTP/1.1
     char method[12];
-    char path[1024];
+    char path[1024]; 
     sscanf(line, "%[^ ] %[^ ]", method, path);
     // 不区分大小写比较
     if (strcasecmp(method, "get") != 0)
     {
         return -1;
     }
+    //遍历自身 处理中文和特殊符号
+    decodeMsg(path,path);
     // 处理客户端请求的静态资源
     char *file = nullptr;
     if (strcmp(path, "/") == 0)
@@ -349,7 +371,7 @@ int sendHeadMsg(int cfd, int status, const char *descr, const char *type, int le
     return 0;
 }
 
-// 将字符转化为整数
+// 将十六进制转化为十进制
 int hexToDec(char c)
 {
     if (c >= '0' && c <= '9')
@@ -359,4 +381,21 @@ int hexToDec(char c)
     if (c >= 'A' && c <= 'F')
         return c - 'A' + 10;
     return 0;
+}
+
+//解码
+void decodeMsg(char *to, char *from)
+{
+    for (; *from - '\0'; ++to, ++from)
+    {
+        if (from[0] == '%' && isxdigit(from[1]) && isxdigit(from[2]))
+        {
+            *to = hexToDec(from[1] * 16 + hexToDec(from[2]));
+            from += 2;
+        }
+        else
+        {
+            *to = *from;
+        }
+    }
 }

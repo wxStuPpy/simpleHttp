@@ -11,7 +11,7 @@ HEADERS = server.h
 CC = g++
 
 # 定义编译选项
-CFLAGS = -Wall -std=c++11
+CFLAGS = -Wall -std=c++11 -lpthread
 
 # 生成可执行文件的目标
 $(TARGET): $(SRC) $(HEADERS)
